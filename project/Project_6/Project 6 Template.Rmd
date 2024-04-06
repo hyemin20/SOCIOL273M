@@ -44,7 +44,7 @@ list.files(file.path(work_dir, "functions"), full.names = TRUE) %>% walk(source)
 
 ### Load ypsps data
 ypsps <- read.csv('ypsps.csv')
-head(ypsps)
+
 ```
 
 # Randomization
@@ -86,7 +86,7 @@ ggplot(df, aes(x = as.factor(treatment), fill = as.factor(treatment))) +
   geom_bar(position = "dodge") +
   facet_wrap(.~parent_Money) +
   labs(title = "Distribution of Treatment/Control by parent Money",
-       x = "Parent Money",
+       x = "Treatment",
        y = "Frequency") +
   scale_fill_manual(values = c("Treatment" = "blue", "Control" = "red"))
 
@@ -197,13 +197,13 @@ bal.plot(match_ps, var.name = "distance", which = "both", type = "histogram")
          
 par(mfrow=c(2, 4)) 
 bal.plot(match_ps, var.name = "student_Gen", which = "both", type = "histogram")
-bal.plot(match_ps, var.name = "student_Trust", which = "both", type = "density")
-bal.plot(match_ps, var.name = "student_Race", which = "both", type = "density")
-bal.plot(match_ps, var.name = "student_GovtOpinion", which = "both", type = "density")
-bal.plot(match_ps, var.name = "parent_EducHH", which = "both", type = "density")
-bal.plot(match_ps, var.name = "parent_Money", which = "both", type = "density")
-bal.plot(match_ps, var.name = "parent_Race", which = "both", type = "density")
-bal.plot(match_ps, var.name = "parent_GovtOpinion", which = "both", type = "density")
+bal.plot(match_ps, var.name = "student_Trust", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "student_Race", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "student_GovtOpinion", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "parent_EducHH", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "parent_Money", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "parent_Race", which = "both", type = "histogram")
+bal.plot(match_ps, var.name = "parent_GovtOpinion", which = "both", type = "histogram")
 
 
 # number of covariates that meet that balance threshold
@@ -431,7 +431,7 @@ sim_results_r <- data.frame(ATTs_r, prop_balanced_r, percent_imp_r)
 summary(sim_results_r)
 
 meanprop_r <- mean(sim_results$prop_balanced_r, na.rm = TRUE)
-sim_results %>% filter(prop_balanced > meanprop_r) %>% nrow()
+sim_results %>% filter(prop_balanced_r > meanprop_r) %>% nrow()
 
   
 
@@ -498,12 +498,12 @@ ggplot(long_data, aes(x = value, fill = variable)) +
 
 \begin{enumerate}
     \item \textbf{Does your alternative matching method have more runs with higher proportions of balanced covariates?}
-     Your Answer: In comparison to the random forest method, which yielded no simulations with higher proportions of balanced covariates out of 1,000, the propensity score matching method demonstrated superior performance with 410 simulations showing higher proportions. This suggests that the logistic regression-based propensity score matching method achieved better covariate balance improvements, potentially due to its robustness in smaller sample sizes and effectiveness in addressing covariate imbalance between treatment and control groups.
+     Your Answer: In comparison to the random forest method, which yielded no simulations with higher proportions of balanced covariates none out of 1,000, the propensity score matching method demonstrated superior performance with 410 simulations showing higher proportions. This suggests that the logistic regression-based propensity score matching method achieved better covariate balance improvements, potentially due to its robustness in smaller sample sizes and effectiveness in addressing covariate imbalance between treatment and control groups.
 \end{enumerate}
 
 \begin{enumerate}
     \item \textbf{Use a visualization to examine the change in the distribution of the percent improvement in balance in propensity score matching vs. the distribution of the percent improvement in balance in your new method. Which did better? Analyze the results in 1-2 sentences.}
-    Your Answer: Based on the visual comparison, the logistic regression-based propensity score matching method outperformed the new method, particularly in achieving superior covariate balance between treatment and control groups.
+    Your Answer: Based on the visual comparison, the new method has a better percent improvement than the logistic regression-based propensity score matching method. However, the result of the original method outperformed the new method, particularly in achieving a superior covariate balance between treatment and control groups, so the slightly higher improvement percentage does not mean the new method is better than the original method.
 \end{enumerate}
 
 \textbf{Optional:} Looking ahead to the discussion questions, you may choose to model the propensity score using an algorithm other than logistic regression and perform these simulations again, if you wish to explore the second discussion question further.
@@ -514,15 +514,11 @@ ggplot(long_data, aes(x = value, fill = variable)) +
     \item \textbf{Why might it be a good idea to do matching even if we have a randomized or as-if-random design?}
     \end{enumerate}
     
-Your Answer: 
-    
-Even in randomized or as-if-random designs, conducting matching can offer several advantages. While randomization aims to evenly distribute covariates between treatment groups, it may not always achieve perfect balance, especially with small sample sizes or many covariates. Matching provides a complementary approach to create more comparable treatment and control groups based on observed covariates, thereby reducing bias and improving the precision of treatment effect estimates. Additionally, matching allows researchers to explore and visualize covariate balance, providing insights into the effectiveness of randomization and potential sources of bias. Overall, matching serves as a valuable tool for robustness checks and enhancing the validity of causal inference in both randomized and observational studies.
+Your Answer: Even in randomized or as-if-random designs, conducting matching can offer several advantages. While randomization aims to evenly distribute covariates between treatment groups, it may not always achieve perfect balance, especially with small sample sizes or many covariates. Matching provides a complementary approach to create more comparable treatment and control groups based on observed covariates, thereby reducing bias and improving the precision of treatment effect estimates. Additionally, matching allows researchers to explore and visualize covariate balance, providing insights into the effectiveness of randomization and potential sources of bias. Overall, matching serves as a valuable tool for robustness checks and enhancing the validity of causal inference in both randomized and observational studies.
 
 \begin{enumerate}
     \item \textbf{The standard way of estimating the propensity score is using a logistic regression to estimate probability of treatment. Given what we know about the curse of dimensionality, do you think there might be advantages to using other machine learning algorithms (decision trees, bagging/boosting forests, ensembles, etc.) to estimate propensity scores instead?}
     \end{enumerate}
 
-Your Answer:
-
-Although logistic regression is the conventional method for estimating propensity scores, alternative machine learning algorithms offer potential advantages, particularly in the context of high-dimensional data or complex relationships between covariates and treatment assignment. Algorithms such as decision trees, bagging/boosting forests, and ensembles can capture nonlinear relationships and interactions more effectively, potentially leading to more accurate propensity score estimates. Moreover, these algorithms are often more robust to model misspecification and can handle high-dimensional data without suffering from the curse of dimensionality.
+Your Answer: Although logistic regression is the conventional method for estimating propensity scores, alternative machine learning algorithms offer potential advantages, particularly in the context of high-dimensional data or complex relationships between covariates and treatment assignment. Algorithms such as decision trees, bagging/boosting forests, and ensembles can capture nonlinear relationships and interactions more effectively, potentially leading to more accurate propensity score estimates. Moreover, these algorithms are often more robust to model misspecification and can handle high-dimensional data without suffering from the curse of dimensionality.
 
