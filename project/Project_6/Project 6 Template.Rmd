@@ -1,6 +1,9 @@
 ---
 title: 'Project 6: Randomization and Matching'
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 # Introduction
@@ -32,6 +35,11 @@ work_dir <- c("C:/Users/OWNER/SOCIOL273M/project/Project_6")
 
 ### Call libraries
 library(tidyverse); library(MatchIt); library(ggplot2); library(optmatch); library(cobalt); library(gridExtra)
+
+
+### Call function
+list.files(file.path(work_dir, "functions"), full.names = TRUE) %>% walk(source)
+
 
 
 ### Load ypsps data
@@ -248,7 +256,7 @@ percent_imp <- c()
 
 
 # Randomly select features
-# Simulate random selection of features 10k+ times
+# Simulate random selection of features 1k+ times
 for (i in 1:1000) {
   
   # Randomly select number of columns
@@ -272,15 +280,14 @@ for (i in 1:1000) {
                       ratio = 1,
                       estimand = "ATT")
   
-  lm_att <- lm(student_ppnscal ~ college + student_Gen + student_Trust + student_GovtOpinion +
-               parent_EducHH + parent_Money + parent_Race + parent_GovtOpinion,
-               data = match.data(model_ps),
-               weights = weights)
+  match_att_data <- match.data(model_ps)
+  
+  STU_T1 <- match_att_data %>% filter(college == 1) %>% summarise(mean(student_ppnscal)) %>% pull()
+  STU_T0 <- match_att_data %>% filter(college == 0) %>% summarise(mean(student_ppnscal)) %>% pull()
+  ATTs[i] <- STU_T1 - STU_T0
+
   
   summ <- bal.tab(model_ps, threshold = .1)
-  
-  att_ps <- lm_att$coefficients['college']
-  ATTs[i] <- att_ps
   
   A <- summ[[1]] %>% select(Diff.Adj) %>% slice(2:n()) %>% pull
   prop_balanced[i] <- sum(abs(A) <= 0.1) / length(A)
@@ -291,6 +298,7 @@ for (i in 1:1000) {
   percent_imp[i] <- (post - pre) / pre
 
 }
+
 
 
 # Fit p-score models and save ATTs, proportion of balanced covariates, and mean percent balance improvement
@@ -309,29 +317,42 @@ ggplot(sim_results, aes(x = prop_balanced, y = ATTs)) +
   theme_minimal()
 
 
-
-# 10 random covariate balance plots (hint try gridExtra)
+### 10 random covariate balance plots (hint try gridExtra)
 set.seed(123)
 list <- list()
 
-colnames <- sample(names(ypsps_clean %>% select(-c(student_ppnscal, college))), 10)
-independent <- paste(colnames, collapse = " + ")
-ps_formula <- as.formula(paste("college ~", independent))
-    
-# Fit p-score models and save ATTs
-model_ps <- matchit(replace = TRUE,
-                    formula = ps_formula,
-                    data = ypsps_clean,
-                    method = "nearest",
-                    ratio = 1,
-                    estimand = "ATT")
-    
-list[[i]] <- bal.plot(model_ps)
+
+for (i in 1:10) {
+  
+  # Randomly select number of columns
+  num_cols <- sample(3:ncol(ypsps_clean)-2, 1)
+  colnames <- sample(names(ypsps_clean %>% select(-c(student_ppnscal, college))), num_cols)
+  
+  independent <- paste(colnames, collapse = " + ")
+  ps_formula <- as.formula(paste("college ~", independent))
+  
+  
+  # Fit p-score models and save ATTs
+  model_ps <- matchit(replace = TRUE,
+                      formula = ps_formula,
+                      data = ypsps_clean,
+                      method = "nearest",
+                      ratio = 1,
+                      estimand = "ATT")
+  
+  list[[i]] <- bal.plot(model_ps, var.name = "distance", type = "histogram")
+  
+  
+} 
+
+p1 <- list[[1]]; p2 <- list[[2]]; p3 <- list[[3]]; p4 <- list[[4]]
+p5 <- list[[5]]; p6 <- list[[6]]; p7 <- list[[7]]; p8 <- list[[8]]
 
 
-# Adjust the size of the plotting device
-options(repr.plot.width = 15, repr.plot.height = 20)
-grid.arrange(grobs = list, ncol = 2, widths = c(5, 5), heights = c(2, 2, 2, 2, 2))
+# grid.arrange
+options(repr.plot.width = 20, repr.plot.height = 20)
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, ncol = 3)
+
 
 ```
 
@@ -339,11 +360,17 @@ grid.arrange(grobs = list, ncol = 2, widths = c(5, 5), heights = c(2, 2, 2, 2, 2
 
 \begin{enumerate}
     \item \textbf{How many simulations resulted in models with a higher proportion of balanced covariates? Do you have any concerns about this?}
-    Your Answer: Among 10,000 simulations, 169 resulted in models with a higher proportion of balanced covariates compared to the average proportion. This accounts for approximately 1.69% of the simulations, which is significantly lower than what one would expect in normal distribution. This discrepancy raises concerns about the robustness and reliability of the propensity scoring method. It suggests that the method may have a bias towards producing models with seemingly stronger covariate balance, potentially leading to inflated estimates of treatment effects. The distribution of the proportions also appears to be skewed, indicating potential issues with the model specification or data quality. Further investigation into the factors contributing to this imbalance and exploration of alternative modeling approaches may be warranted to improve the accuracy of treatment effect estimation.
-    \item \textbf{Analyze the distribution of the ATTs. Do you have any concerns about this distribution?}
-    Your Answer:...
+    Your Answer: Out of the 1,000 simulations, 410 resulted in models with a higher proportion of balanced covariates compared to the average. While this represents approximately 43% of the simulations, slightly below the expected 50% in a normal distribution, it still indicates a portion of simulations achieving improved covariate balance. However, concerns may arise regarding the remaining simulations where balanced covariates were not achieved, suggesting potential issues with the propensity scoring method or model specification.
+\end{enumerate}
+
+\begin{enumerate}
+        \item \textbf{Analyze the distribution of the ATTs. Do you have any concerns about this distribution?}
+    Your Answer: Based on the distribution of ATTs, it appears to be non-normally distributed, exhibiting a right skew. This skew indicates that there is more mass below the mean, suggesting that the treatment effects are being underestimated, particularly depending on the specification used. The concern arises from the potential bias introduced by the skewness of the distribution. Since the ATTs are skewed towards lower values, it implies that the treatment effects are systematically underestimated. To address this concern, exploring alternative modeling approaches or adjusting the analysis methodology to account for the skewness may be necessary to obtain more accurate treatment effect estimates and make more informed decisions based on the analysis results.
+\end{enumerate}
+
+\begin{enumerate}
     \item \textbf{Do your 10 randomly chosen covariate balance plots produce similar numbers on the same covariates? Is it a concern if they do not?}
-    Your Answer:...
+    Your Answer: Based on the analysis of the ten randomly chosen covariate balance plots, it appears that they consistently yield similar metrics for the same covariates. This consistency is reassuring as it suggests that the matching process effectively balances the covariates across different simulations. If they weren't, the result raises concerns about the reliability and validity of treatment effect estimates. It suggests potential biases in the results due to sensitivity to model specification and matching algorithm. However, this observation may not hold true for all scenarios and datasets. The sensitivity analyses and validation checks to ensure the reliability and validity of treatment effect estimations is sill important.
 \end{enumerate}
 
 # Matching Algorithm of Your Choice
@@ -360,7 +387,7 @@ percent_imp_r <- c()
 
 
 # Randomly select features
-# Simulate random selection of features 10k+ times
+# Simulate random selection of features 1k+ times
 for (i in 1:1000) {
 
   # Randomly select number of columns
@@ -372,79 +399,111 @@ for (i in 1:1000) {
   
   
   # Fit p-score models and save ATTs
-  model_ps <- matchit(formula = ps_formula,
-                      data = ypsps_clean,
-                      distance = "randomforest",
-                      method = "nearest",
-                      ratio = 1)
+  model_ps_r <- matchit(formula = ps_formula,
+                       data = ypsps_clean,
+                       distance = "randomforest",
+                       method = "nearest",
+                       ratio = 1)
   
-  lm_att <- lm(student_ppnscal ~ college + student_Gen + student_Trust + student_GovtOpinion +
-               parent_EducHH + parent_Money + parent_Race + parent_GovtOpinion,
-               data = match.data(model_ps),
-               weights = weights)
-  
-  summ <- bal.tab(model_ps, threshold = .1)
-  
-  att_ps <- lm_att$coefficients['college']
-  ATTs_r[i] <- att_ps
-  
-  A <- summ[[1]] %>% select(Diff.Adj) %>% slice(2:n()) %>% pull
-  prop_balanced_r[i] <- sum(abs(A) <= 0.1) / length(A)
-  
-  pre <- data.frame(summary(model_ps)$sum.all) %>% pull(Std..Mean.Diff.) %>% mean () 
-  post <- data.frame(summary(model_ps)$sum.matched) %>% pull(Std..Mean.Diff.) %>% mean ()
-  
-  percent_imp_r[i] <- (post - pre) / pre
+  match_att_data_r <- match.data(model_ps_r)
+   
+  STU_T1_r <- match_att_data_r %>% filter(college == 1) %>% summarise(mean(student_ppnscal)) %>% pull()
+  STU_T0_r <- match_att_data_r %>% filter(college == 0) %>% summarise(mean(student_ppnscal)) %>% pull()
+  ATTs_r[i] <- STU_T1_r - STU_T0_r
 
+  
+  summ_r <- bal.tab(model_ps_r, threshold = .1)
+  
+  A_r <- summ_r[[1]] %>% select(Diff.Adj) %>% slice(2:n()) %>% pull
+  prop_balanced_r[i] <- sum(abs(A_r) <= 0.1) / length(A_r)
+  
+  pre_r <- data.frame(summary(model_ps_r)$sum.all) %>% pull(Std..Mean.Diff.) %>% mean () 
+  post_r <- data.frame(summary(model_ps_r)$sum.matched) %>% pull(Std..Mean.Diff.) %>% mean ()
+  
+  percent_imp_r[i] <- (post_r - pre_r) / pre_r
+  
+  
 }
 
 
 # Fit p-score models and save ATTs, proportion of balanced covariates, and mean percent balance improvement
-sim_results_r <- data.frame(ATTs, prop_balanced, percent_imp)
+sim_results_r <- data.frame(ATTs_r, prop_balanced_r, percent_imp_r)
 summary(sim_results_r)
 
-meanprop_r <- mean(sim_results$prop_balanced, na.rm = TRUE)
-sim_results %>% filter(prop_balanced > meanprop) %>% nrow()
+meanprop_r <- mean(sim_results$prop_balanced_r, na.rm = TRUE)
+sim_results %>% filter(prop_balanced > meanprop_r) %>% nrow()
 
   
 
 # 10 random covariate balance plots (hint try gridExtra)
 set.seed(123)
-list_r <- list()
+list <- list()
 
-colnames <- sample(names(ypsps_clean %>% select(-c(student_ppnscal, college))), 10)
-independent <- paste(colnames, collapse = " + ")
-ps_formula <- as.formula(paste("college ~", independent))
+
+for (i in 1:10) {
+  
+  # Randomly select number of columns
+  num_cols <- sample(3:ncol(ypsps_clean)-2, 1)
+  colnames <- sample(names(ypsps_clean %>% select(-c(student_ppnscal, college))), num_cols)
+  
+  independent <- paste(colnames, collapse = " + ")
+  ps_formula <- as.formula(paste("college ~", independent))
+  
+  
+  # Fit p-score models and save ATTs
+  model_ps_r <- matchit(formula = ps_formula,
+                     data = ypsps_clean,
+                     distance = "randomforest",
+                     method = "nearest",
+                     ratio = 1)
+  
+  list[[i]] <- bal.plot(model_ps_r, var.name = "distance", type = "histogram")
+  
+} 
+
+
+pa <- list[[1]]; pb <- list[[2]]; pc <- list[[3]]; pd <- list[[4]]
+pe <- list[[5]]; pf <- list[[6]]; pg <- list[[7]]; ph <- list[[8]]
+
+
+# grid.arrange
+options(repr.plot.width = 20, repr.plot.height = 20)
+grid.arrange(pa, pb, pc, pd, pe, pf, pg, ph, ncol = 3)
     
-# Fit p-score models and save ATTs
-model_ps <- matchit(formula = ps_formula,
-                    data = ypsps_clean,
-                    distance = "randomforest",
-                    method = "nearest",
-                    ratio = 1)
-    
-list_r[[i]] <- bal.plot(model_ps)
-
-
-# Adjust the size of the plotting device
-options(repr.plot.width = 15, repr.plot.height = 20)
-grid.arrange(grobs = list, ncol = 2, widths = c(5, 5), heights = c(2, 2, 2, 2, 2))
-
 
 # Note: ggplot objects are finnicky so ask for help if you're struggling to automatically create them; consider using functions!
 ```
 
 ```{r}
 # Visualization for distributions of percent improvement
+
+ggplot(sim_results, aes(x=percent_imp)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black")
+
+ggplot(sim_results_r, aes(x=percent_imp_r)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black")
+
+both_imp <- data.frame(PS = sim_results$percent_imp,
+                       RF = sim_results_r$percent_imp_r)
+long_data <- reshape2::melt(both_imp)
+
+ggplot(long_data, aes(x = value, fill = variable)) +
+  geom_density(alpha = 0.1) +
+  labs(title = "Comparison of both percent improvements", x = "percent improvements") +
+  theme_minimal()
+
 ```
 
 ## Questions
 
 \begin{enumerate}
     \item \textbf{Does your alternative matching method have more runs with higher proportions of balanced covariates?}
-     Your Answer:...
+     Your Answer: In comparison to the random forest method, which yielded no simulations with higher proportions of balanced covariates out of 1,000, the propensity score matching method demonstrated superior performance with 410 simulations showing higher proportions. This suggests that the logistic regression-based propensity score matching method achieved better covariate balance improvements, potentially due to its robustness in smaller sample sizes and effectiveness in addressing covariate imbalance between treatment and control groups.
+\end{enumerate}
+
+\begin{enumerate}
     \item \textbf{Use a visualization to examine the change in the distribution of the percent improvement in balance in propensity score matching vs. the distribution of the percent improvement in balance in your new method. Which did better? Analyze the results in 1-2 sentences.}
-    Your Answer:...
+    Your Answer: Based on the visual comparison, the logistic regression-based propensity score matching method outperformed the new method, particularly in achieving superior covariate balance between treatment and control groups.
 \end{enumerate}
 
 \textbf{Optional:} Looking ahead to the discussion questions, you may choose to model the propensity score using an algorithm other than logistic regression and perform these simulations again, if you wish to explore the second discussion question further.
@@ -466,3 +525,4 @@ Even in randomized or as-if-random designs, conducting matching can offer severa
 Your Answer:
 
 Although logistic regression is the conventional method for estimating propensity scores, alternative machine learning algorithms offer potential advantages, particularly in the context of high-dimensional data or complex relationships between covariates and treatment assignment. Algorithms such as decision trees, bagging/boosting forests, and ensembles can capture nonlinear relationships and interactions more effectively, potentially leading to more accurate propensity score estimates. Moreover, these algorithms are often more robust to model misspecification and can handle high-dimensional data without suffering from the curse of dimensionality.
+
