@@ -503,7 +503,7 @@ ggplot(long_data, aes(x = value, fill = variable)) +
 
 \begin{enumerate}
     \item \textbf{Use a visualization to examine the change in the distribution of the percent improvement in balance in propensity score matching vs. the distribution of the percent improvement in balance in your new method. Which did better? Analyze the results in 1-2 sentences.}
-    Your Answer: Based on the visual comparison, the new method has a better percent improvement than the logistic regression-based propensity score matching method. However, the result of the original method outperformed the new method, particularly in achieving a superior covariate balance between treatment and control groups, so the slightly higher improvement percentage does not mean the new method is better than the original method.
+    Your Answer: Based on the comparison of the distributions, while the original propensity score matching method had a higher proportion of simulations with highly balanced covariates, the random forest method showed no instances of highly balanced covariates.
 \end{enumerate}
 
 \textbf{Optional:} Looking ahead to the discussion questions, you may choose to model the propensity score using an algorithm other than logistic regression and perform these simulations again, if you wish to explore the second discussion question further.
