@@ -357,7 +357,7 @@ Synthetic Control</h1>
 <pre class="r"><code>gc(); rm(list=ls())</code></pre>
 <pre><code>##          used (Mb) gc trigger (Mb) max used (Mb)
 ## Ncells 523973 28.0    1166817 62.4   660497 35.3
-## Vcells 957414  7.4    8388608 64.0  1770407 13.6</code></pre>
+## Vcells 957414  7.4    8388608 64.0  1770414 13.6</code></pre>
 <pre class="r"><code># Install and load packages 
 if (!require(&quot;pacman&quot;)) install.packages(&quot;pacman&quot;)</code></pre>
 <pre><code>## Loading required package: pacman</code></pre>
@@ -889,7 +889,7 @@ late</code></pre>
 ##  9 Pennsylvania  2015-01-01    2008         0.0960   12787209 Pre_2014
 ## 10 Utah          2020-01-01    2008         0.241     2942902 Pre_2014
 ## # ℹ 133 more rows</code></pre>
-<pre class="r"><code>donor_pool &lt;- medicaid_expansion %&gt;% 
+<pre class="r"><code>Control_pool &lt;- medicaid_expansion %&gt;% 
   filter(is.na(Date_Adopted)) %&gt;% 
   select(State) %&gt;% 
   distinct(State) %&gt;%
@@ -900,7 +900,7 @@ late</code></pre>
 # non-augmented synthetic control
 aug_df &lt;- medicaid_expansion %&gt;% 
   mutate(num_uninsured = uninsured_rate*population/100) %&gt;%
-  filter(State==&quot;Pennsylvania&quot;|State %in% donor_pool) %&gt;% 
+  filter(State==&quot;Pennsylvania&quot;|State %in% Control_pool) %&gt;% 
   mutate(Treatment = ifelse(lubridate::year(Date_Adopted) &gt; year | is.na(Date_Adopted), 0, 1)) %&gt;%
   filter(!is.na(uninsured_rate))
 

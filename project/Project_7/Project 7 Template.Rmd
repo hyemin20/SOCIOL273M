@@ -401,7 +401,7 @@ late <- medicaid_expansion %>%
   unique() 
 late
 
-donor_pool <- medicaid_expansion %>% 
+Control_pool <- medicaid_expansion %>% 
   filter(is.na(Date_Adopted)) %>% 
   select(State) %>% 
   distinct(State) %>%
@@ -412,7 +412,7 @@ donor_pool <- medicaid_expansion %>%
 # non-augmented synthetic control
 aug_df <- medicaid_expansion %>% 
   mutate(num_uninsured = uninsured_rate*population/100) %>%
-  filter(State=="Pennsylvania"|State %in% donor_pool) %>% 
+  filter(State=="Pennsylvania"|State %in% Control_pool) %>% 
   mutate(Treatment = ifelse(lubridate::year(Date_Adopted) > year | is.na(Date_Adopted), 0, 1)) %>%
   filter(!is.na(uninsured_rate))
 
